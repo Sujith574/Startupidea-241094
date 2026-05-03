@@ -12,8 +12,10 @@ services:
         value: production
       - key: PORT
         value: 5000
-      - key: MONGODB_URI
-        sync: false   # set manually in Render dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: parcelbridge-db
+          property: connectionString
       - key: JWT_SECRET
         value: ahilugodltwuhlhh
       - key: JWT_EXPIRES_IN
@@ -47,3 +49,8 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false   # set to backend URL after deploy
+
+databases:
+  - name: parcelbridge-db
+    plan: free
+    region: singapore

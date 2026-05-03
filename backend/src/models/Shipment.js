@@ -1,57 +1,57 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const statusTimelineSchema = new mongoose.Schema({
-  status: String,
-  timestamp: { type: Date, default: Date.now },
-  note: String,
-  updatedBy: String,
-}, { _id: false });
-
-const shipmentSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  userEmail: { type: String, required: true },
-
-  pickupAddress: { type: String, required: true },
+const Shipment = sequelize.define('Shipment', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  userEmail: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  pickupAddress: { type: DataTypes.TEXT, allowNull: false },
   pickupCoords: {
-    lat: { type: Number, default: 17.385 },
-    lng: { type: Number, default: 78.4867 },
+    type: DataTypes.JSONB,
+    defaultValue: { lat: 17.385, lng: 78.4867 },
   },
-  deliveryAddress: { type: String, required: true },
+  deliveryAddress: { type: DataTypes.TEXT, allowNull: false },
   deliveryCoords: {
-    lat: { type: Number, default: 19.076 },
-    lng: { type: Number, default: 72.8777 },
+    type: DataTypes.JSONB,
+    defaultValue: { lat: 19.076, lng: 72.8777 },
   },
-
-  weight: { type: Number, required: true },
+  weight: { type: DataTypes.DOUBLE, allowNull: false },
   dimensions: {
-    length: { type: Number, default: 0 },
-    width:  { type: Number, default: 0 },
-    height: { type: Number, default: 0 },
+    type: DataTypes.JSONB,
+    defaultValue: { length: 0, width: 0, height: 0 },
   },
-  parcelType: { type: String, default: 'General' },
-
-  courier: { type: mongoose.Schema.Types.Mixed },
-
+  parcelType: { type: DataTypes.STRING, defaultValue: 'General' },
+  courier: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+  },
   status: {
-    type: String,
-    enum: ['CREATED', 'PARTNER_ASSIGNED', 'PICKED_UP', 'HANDED_TO_COURIER', 'IN_TRANSIT', 'DELIVERED'],
-    default: 'CREATED',
+    type: DataTypes.ENUM('CREATED', 'PARTNER_ASSIGNED', 'PICKED_UP', 'HANDED_TO_COURIER', 'IN_TRANSIT', 'DELIVERED'),
+    defaultValue: 'CREATED',
   },
-  statusTimeline: [statusTimelineSchema],
-
-  deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  deliveryPartnerName: { type: String, default: null },
-
-  platformFee: { type: Number, default: 0 },
-  totalAmount: { type: Number, default: 0 },
+  statusTimeline: {
+    type: DataTypes.JSONB,
+    defaultValue: [],
+  },
+  deliveryPartnerId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+  deliveryPartnerName: { type: DataTypes.STRING, defaultValue: null },
+  platformFee: { type: DataTypes.INTEGER, defaultValue: 0 },
+  totalAmount: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true },
 });
 
-shipmentSchema.virtual('id').get(function () {
-  return this._id.toHexString();
-});
-
-module.exports = mongoose.model('Shipment', shipmentSchema);
+module.exports = Shipment;

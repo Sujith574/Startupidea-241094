@@ -1,25 +1,35 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
 
-let isConnected = false;
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.error('❌ DATABASE_URL is not defined in environment variables');
+}
+
+const sequelize = new Sequelize(databaseUrl, {
+  dialect: 'postgres',
+  logging: false, // Set to console.log to see SQL queries
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false, // Required for Render's managed databases
+    },
+  },
+});
 
 async function connectDB() {
-  if (isConnected) return;
-
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    throw new Error('MONGODB_URI is not defined in environment variables');
-  }
-
   try {
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 10000,
-    });
-    isConnected = true;
-    console.log('✅ MongoDB connected:', mongoose.connection.host);
+    await sequelize.authenticate();
+    console.log('✅ PostgreSQL connected via Sequelize');
+    
+    // Sync models
+    // In production, you might want to use migrations instead of sync({ alter: true })
+    await sequelize.sync({ alter: true });
+    console.log('✅ Database models synchronized');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ PostgreSQL connection error:', err.message);
     process.exit(1);
   }
 }
 
-module.exports = connectDB;
+module.exports = { sequelize, connectDB };

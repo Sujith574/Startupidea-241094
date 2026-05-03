@@ -4,10 +4,10 @@ const User = require('../models/User');
 const Shipment = require('../models/Shipment');
 const Transaction = require('../models/Transaction');
 const { Notifications } = require('../utils/notifications');
+const { sequelize } = require('../config/db');
 
 const router = express.Router();
 
-// ─── Admin guard (inline — no Firebase) ──────────────────────────────────────
 function adminOnly(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required' });
@@ -20,9 +20,11 @@ router.use(authenticate, adminOnly);
 // ─── GET /admin/users ─────────────────────────────────────────────────────────
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({ role: { $in: ['user', 'admin'] } })
-      .sort({ createdAt: -1 }).select('-__v').lean();
-    return res.json({ users: users.map(u => ({ ...u, id: u._id })), count: users.length });
+    const users = await User.findAll({
+      where: { role: { [sequelize.Sequelize.Op.in]: ['user', 'admin'] } },
+      order: [['createdAt', 'DESC']]
+    });
+    return res.json({ users, count: users.length });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -31,8 +33,8 @@ router.get('/users', async (req, res) => {
 // ─── GET /admin/shipments ─────────────────────────────────────────────────────
 router.get('/shipments', async (req, res) => {
   try {
-    const shipments = await Shipment.find().sort({ createdAt: -1 }).lean();
-    return res.json({ shipments: shipments.map(s => ({ ...s, id: s._id })), count: shipments.length });
+    const shipments = await Shipment.findAll({ order: [['createdAt', 'DESC']] });
+    return res.json({ shipments, count: shipments.length });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -41,9 +43,11 @@ router.get('/shipments', async (req, res) => {
 // ─── GET /admin/partners ──────────────────────────────────────────────────────
 router.get('/partners', async (req, res) => {
   try {
-    const partners = await User.find({ role: 'deliveryPartner' })
-      .sort({ createdAt: -1 }).select('-__v').lean();
-    return res.json({ partners: partners.map(p => ({ ...p, id: p._id })), count: partners.length });
+    const partners = await User.findAll({
+      where: { role: 'deliveryPartner' },
+      order: [['createdAt', 'DESC']]
+    });
+    return res.json({ partners, count: partners.length });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -60,19 +64,22 @@ router.get('/analytics', async (req, res) => {
       transactions,
       shipmentStatuses,
     ] = await Promise.all([
-      User.countDocuments({ role: 'user' }),
-      User.countDocuments({ role: 'deliveryPartner' }),
-      Shipment.countDocuments(),
-      User.countDocuments({ role: 'deliveryPartner', status: 'available' }),
-      Transaction.find().select('platformFee status').lean(),
-      Shipment.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      User.count({ where: { role: 'user' } }),
+      User.count({ where: { role: 'deliveryPartner' } }),
+      Shipment.count(),
+      User.count({ where: { role: 'deliveryPartner', status: 'available' } }),
+      Transaction.findAll({ attributes: ['platformFee', 'status'] }),
+      Shipment.findAll({
+        attributes: ['status', [sequelize.fn('COUNT', sequelize.col('status')), 'count']],
+        group: ['status']
+      }),
     ]);
 
     const totalRevenue = transactions.reduce((s, t) => s + (t.platformFee || 0), 0);
     const completedOrders = transactions.filter(t => t.status === 'completed').length;
 
     const statusCounts = {};
-    shipmentStatuses.forEach(s => { statusCounts[s._id] = s.count; });
+    shipmentStatuses.forEach(s => { statusCounts[s.status] = parseInt(s.get('count')); });
 
     return res.json({
       totalUsers,
@@ -92,49 +99,24 @@ router.get('/analytics', async (req, res) => {
 router.patch('/assign-partner', async (req, res) => {
   try {
     const { shipmentId, partnerId } = req.body;
-    if (!shipmentId || !partnerId) {
-      return res.status(400).json({ error: 'shipmentId and partnerId required' });
-    }
+    const shipment = await Shipment.findByPk(shipmentId);
+    const partner = await User.findByPk(partnerId);
 
-    const [shipment, partner] = await Promise.all([
-      Shipment.findById(shipmentId),
-      User.findById(partnerId),
-    ]);
-    if (!shipment) return res.status(404).json({ error: 'Shipment not found' });
-    if (!partner) return res.status(404).json({ error: 'Partner not found' });
+    if (!shipment || !partner) return res.status(404).json({ error: 'Not found' });
 
-    shipment.deliveryPartnerId = partner._id;
+    shipment.deliveryPartnerId = partner.id;
     shipment.deliveryPartnerName = partner.name;
     shipment.status = 'PARTNER_ASSIGNED';
-    shipment.statusTimeline.push({
+    shipment.statusTimeline = [...shipment.statusTimeline, {
       status: 'PARTNER_ASSIGNED',
       timestamp: new Date(),
       note: `Manually assigned by admin to ${partner.name}`,
-    });
+    }];
     await shipment.save();
-    await User.findByIdAndUpdate(partnerId, { status: 'busy' });
+    await User.update({ status: 'busy' }, { where: { id: partnerId } });
 
     Notifications.partnerAssigned(shipmentId, shipment.userEmail, partner.name);
-    return res.json({ message: `Partner ${partner.name} assigned to shipment ${shipmentId}` });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── PATCH /admin/users/:id/role ──────────────────────────────────────────────
-router.patch('/users/:id/role', async (req, res) => {
-  try {
-    const { role } = req.body;
-    if (!['user', 'admin', 'deliveryPartner'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
-    }
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, select: '-__v' }
-    ).lean();
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ message: `Role updated to ${role}`, user: { ...user, id: user._id } });
+    return res.json({ message: `Partner assigned` });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

@@ -1,25 +1,31 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const transactionSchema = new mongoose.Schema({
-  shipmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shipment', required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  courierPrice: { type: Number, default: 0 },
-  platformFee: { type: Number, default: 0 },
-  totalAmount: { type: Number, default: 0 },
-  partnerEarning: { type: Number, default: 0 },
-  status: {
-    type: String,
-    enum: ['pending', 'completed', 'refunded'],
-    default: 'pending',
+const Transaction = sequelize.define('Transaction', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
-  completedAt: { type: Date, default: null },
+  shipmentId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  courierPrice: { type: DataTypes.INTEGER, defaultValue: 0 },
+  platformFee: { type: DataTypes.INTEGER, defaultValue: 0 },
+  totalAmount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  partnerEarning: { type: DataTypes.INTEGER, defaultValue: 0 },
+  status: {
+    type: DataTypes.ENUM('pending', 'completed', 'refunded'),
+    defaultValue: 'pending',
+  },
+  completedAt: { type: DataTypes.DATE, allowNull: true },
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
 });
 
-transactionSchema.virtual('id').get(function () {
-  return this._id.toHexString();
-});
-
-module.exports = mongoose.model('Transaction', transactionSchema);
+module.exports = Transaction;

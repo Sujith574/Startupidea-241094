@@ -13,15 +13,18 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Find nearest available delivery partner using MongoDB User model
- * @param {import('mongoose').Model} UserModel
+ * Find nearest available delivery partner using Sequelize User model
+ * @param {import('sequelize').Model} UserModel
  * @param {{ lat: number, lng: number }} pickupCoords
  */
 async function findNearestPartner(UserModel, pickupCoords) {
-  const partners = await UserModel.find({
-    role: 'deliveryPartner',
-    status: 'available',
-  }).select('name email currentLocation status').lean();
+  const partners = await UserModel.findAll({
+    where: {
+      role: 'deliveryPartner',
+      status: 'available',
+    },
+    attributes: ['id', 'name', 'email', 'lat', 'lng', 'status']
+  });
 
   if (!partners.length) return null;
 
@@ -29,14 +32,14 @@ async function findNearestPartner(UserModel, pickupCoords) {
   let minDist = Infinity;
 
   for (const p of partners) {
-    if (!p.currentLocation) continue;
+    if (p.lat === null || p.lng === null) continue;
     const dist = haversineDistance(
       pickupCoords.lat, pickupCoords.lng,
-      p.currentLocation.lat, p.currentLocation.lng
+      p.lat, p.lng
     );
     if (dist < minDist) {
       minDist = dist;
-      nearest = { id: p._id.toString(), data: p, distance: dist };
+      nearest = { id: p.id, data: p, distance: dist };
     }
   }
 

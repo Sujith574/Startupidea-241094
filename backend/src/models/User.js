@@ -1,46 +1,42 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const userSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
   email: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true,
-    lowercase: true,
-    trim: true,
+    validate: { isEmail: true },
   },
-  name: { type: String, default: '' },
-  phone: { type: String, default: '' },
+  name: { type: DataTypes.STRING, defaultValue: '' },
+  phone: { type: DataTypes.STRING, defaultValue: '' },
   role: {
-    type: String,
-    enum: ['user', 'deliveryPartner', 'admin'],
-    default: 'user',
+    type: DataTypes.ENUM('user', 'deliveryPartner', 'admin'),
+    defaultValue: 'user',
   },
-  address: { type: String, default: '' },
+  address: { type: DataTypes.TEXT, defaultValue: '' },
 
   // Delivery partner specific fields
-  vehicleType: { type: String, default: '' },
-  licenseNumber: { type: String, default: '' },
+  vehicleType: { type: DataTypes.STRING, defaultValue: '' },
+  licenseNumber: { type: DataTypes.STRING, defaultValue: '' },
   status: {
-    type: String,
-    enum: ['available', 'busy', 'offline'],
-    default: 'available',
+    type: DataTypes.ENUM('available', 'busy', 'offline'),
+    defaultValue: 'available',
   },
-  currentLocation: {
-    lat: { type: Number, default: 17.385 },
-    lng: { type: Number, default: 78.4867 },
-  },
-  totalDeliveries: { type: Number, default: 0 },
-  totalEarnings: { type: Number, default: 0 },
+  lat: { type: DataTypes.DOUBLE, defaultValue: 17.385 },
+  lng: { type: DataTypes.DOUBLE, defaultValue: 78.4867 },
+  
+  totalDeliveries: { type: DataTypes.INTEGER, defaultValue: 0 },
+  totalEarnings: { type: DataTypes.INTEGER, defaultValue: 0 },
 
-  isProfileComplete: { type: Boolean, default: false },
+  isProfileComplete: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true },
 });
 
-userSchema.virtual('id').get(function () {
-  return this._id.toHexString();
-});
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

@@ -51,7 +51,7 @@ router.post('/', authenticate, async (req, res) => {
 
     // Store transaction
     await Transaction.create({
-      shipmentId: shipment._id,
+      shipmentId: shipment.id,
       userId: req.user.userId,
       courierPrice: chosen.price,
       platformFee,
@@ -65,21 +65,24 @@ router.post('/', authenticate, async (req, res) => {
       shipment.status = 'PARTNER_ASSIGNED';
       shipment.deliveryPartnerId = nearest.id;
       shipment.deliveryPartnerName = nearest.data.name;
-      shipment.statusTimeline.push({
+      
+      const updatedTimeline = [...shipment.statusTimeline, {
         status: 'PARTNER_ASSIGNED',
         timestamp: new Date(),
         note: `Auto-assigned to ${nearest.data.name}`,
-      });
+      }];
+      shipment.statusTimeline = updatedTimeline;
+      
       await shipment.save();
-      await User.findByIdAndUpdate(nearest.id, { status: 'busy' });
-      Notifications.partnerAssigned(shipment._id.toString(), req.user.email, nearest.data.name);
-      Notifications.newJobAssigned && Notifications.newJobAssigned(shipment._id.toString(), nearest.data.email);
+      await User.update({ status: 'busy' }, { where: { id: nearest.id } });
+      
+      Notifications.partnerAssigned(shipment.id, req.user.email, nearest.data.name);
     }
 
-    Notifications.bookingConfirmed(shipment._id.toString(), req.user.email);
+    Notifications.bookingConfirmed(shipment.id, req.user.email);
     return res.status(201).json({
       message: 'Shipment created',
-      shipmentId: shipment._id,
+      shipmentId: shipment.id,
       shipment,
     });
   } catch (err) {
@@ -91,9 +94,10 @@ router.post('/', authenticate, async (req, res) => {
 // ─── GET /shipments — My shipments ────────────────────────────────────────────
 router.get('/', authenticate, async (req, res) => {
   try {
-    const shipments = await Shipment.find({ userId: req.user.userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const shipments = await Shipment.findAll({
+      where: { userId: req.user.userId },
+      order: [['createdAt', 'DESC']]
+    });
     return res.json({ shipments });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -103,19 +107,19 @@ router.get('/', authenticate, async (req, res) => {
 // ─── GET /shipments/:id ───────────────────────────────────────────────────────
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const shipment = await Shipment.findById(req.params.id).lean();
+    const shipment = await Shipment.findByPk(req.params.id);
     if (!shipment) return res.status(404).json({ error: 'Shipment not found' });
 
     const uid = req.user.userId;
-    const isOwner = shipment.userId.toString() === uid;
-    const isPartner = shipment.deliveryPartnerId?.toString() === uid;
+    const isOwner = shipment.userId === uid;
+    const isPartner = shipment.deliveryPartnerId === uid;
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isPartner && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    return res.json({ shipment: { ...shipment, id: shipment._id } });
+    return res.json({ shipment });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -126,30 +130,30 @@ router.patch('/:id/status', authenticate, async (req, res) => {
   try {
     const { status, note } = req.body;
     if (!STATUS_FLOW.includes(status)) {
-      return res.status(400).json({ error: `Invalid status. Valid: ${STATUS_FLOW.join(', ')}` });
+      return res.status(400).json({ error: `Invalid status` });
     }
 
-    const shipment = await Shipment.findById(req.params.id);
+    const shipment = await Shipment.findByPk(req.params.id);
     if (!shipment) return res.status(404).json({ error: 'Shipment not found' });
 
     shipment.status = status;
-    shipment.statusTimeline.push({
+    const updatedTimeline = [...shipment.statusTimeline, {
       status,
       timestamp: new Date(),
       note: note || `Updated to ${status}`,
       updatedBy: req.user.userId,
-    });
+    }];
+    shipment.statusTimeline = updatedTimeline;
     await shipment.save();
 
     if (status === 'DELIVERED' && shipment.deliveryPartnerId) {
       const earning = Math.round(shipment.platformFee * 0.6);
-      await User.findByIdAndUpdate(shipment.deliveryPartnerId, {
-        $inc: { totalDeliveries: 1, totalEarnings: earning },
-        status: 'available',
-      });
-      await Transaction.findOneAndUpdate(
-        { shipmentId: shipment._id },
-        { status: 'completed', completedAt: new Date(), partnerEarning: earning }
+      await User.increment({ totalDeliveries: 1, totalEarnings: earning }, { where: { id: shipment.deliveryPartnerId } });
+      await User.update({ status: 'available' }, { where: { id: shipment.deliveryPartnerId } });
+      
+      await Transaction.update(
+        { status: 'completed', completedAt: new Date(), partnerEarning: earning },
+        { where: { shipmentId: shipment.id } }
       );
     }
 

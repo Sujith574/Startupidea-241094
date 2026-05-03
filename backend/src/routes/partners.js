@@ -9,9 +9,10 @@ const STATUS_OPTIONS = ['PICKED_UP','HANDED_TO_COURIER','IN_TRANSIT','DELIVERED'
 // ─── GET /partners/jobs ───────────────────────────────────────────────────────
 router.get('/jobs', authenticate, async (req, res) => {
   try {
-    const jobs = await Shipment.find({ deliveryPartnerId: req.user.userId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const jobs = await Shipment.findAll({
+      where: { deliveryPartnerId: req.user.userId },
+      order: [['createdAt', 'DESC']]
+    });
     return res.json({ jobs });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -24,9 +25,9 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
     const { action, status, note } = req.body;
     const uid = req.user.userId;
 
-    const shipment = await Shipment.findById(req.params.id);
+    const shipment = await Shipment.findByPk(req.params.id);
     if (!shipment) return res.status(404).json({ error: 'Job not found' });
-    if (shipment.deliveryPartnerId?.toString() !== uid) {
+    if (shipment.deliveryPartnerId !== uid) {
       return res.status(403).json({ error: 'This job is not assigned to you' });
     }
 
@@ -36,29 +37,27 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
       shipment.deliveryPartnerId = null;
       shipment.deliveryPartnerName = null;
       shipment.status = 'CREATED';
-      shipment.statusTimeline.push({ status: 'CREATED', timestamp: now, note: 'Partner rejected — re-queued' });
+      shipment.statusTimeline = [...shipment.statusTimeline, { status: 'CREATED', timestamp: now, note: 'Partner rejected — re-queued' }];
       await shipment.save();
-      await User.findByIdAndUpdate(uid, { status: 'available' });
+      await User.update({ status: 'available' }, { where: { id: uid } });
       return res.json({ message: 'Job rejected and re-queued' });
     }
 
     if (action === 'accept') {
-      shipment.statusTimeline.push({ status: 'PARTNER_ASSIGNED', timestamp: now, note: 'Partner accepted', updatedBy: uid });
+      shipment.statusTimeline = [...shipment.statusTimeline, { status: 'PARTNER_ASSIGNED', timestamp: now, note: 'Partner accepted', updatedBy: uid }];
       await shipment.save();
       return res.json({ message: 'Job accepted' });
     }
 
     if (status && STATUS_OPTIONS.includes(status)) {
       shipment.status = status;
-      shipment.statusTimeline.push({ status, timestamp: now, note: note || `Updated to ${status}`, updatedBy: uid });
+      shipment.statusTimeline = [...shipment.statusTimeline, { status, timestamp: now, note: note || `Updated to ${status}`, updatedBy: uid }];
       await shipment.save();
 
       if (status === 'DELIVERED') {
         const earning = Math.round((shipment.platformFee || 20) * 0.6);
-        await User.findByIdAndUpdate(uid, {
-          $inc: { totalDeliveries: 1, totalEarnings: earning },
-          status: 'available',
-        });
+        await User.increment({ totalDeliveries: 1, totalEarnings: earning }, { where: { id: uid } });
+        await User.update({ status: 'available' }, { where: { id: uid } });
       }
       return res.json({ message: `Status updated to ${status}` });
     }
@@ -72,9 +71,9 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
 // ─── GET /partners/earnings ────────────────────────────────────────────────────
 router.get('/earnings', authenticate, async (req, res) => {
   try {
-    const partner = await User.findById(req.user.userId)
-      .select('totalDeliveries totalEarnings status')
-      .lean();
+    const partner = await User.findByPk(req.user.userId, {
+      attributes: ['totalDeliveries', 'totalEarnings', 'status']
+    });
     if (!partner) return res.status(404).json({ error: 'Partner not found' });
     return res.json({
       totalDeliveries: partner.totalDeliveries || 0,
@@ -91,9 +90,10 @@ router.patch('/location', authenticate, async (req, res) => {
   try {
     const { lat, lng } = req.body;
     if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
-    await User.findByIdAndUpdate(req.user.userId, {
-      currentLocation: { lat: parseFloat(lat), lng: parseFloat(lng) },
-    });
+    await User.update({
+      lat: parseFloat(lat),
+      lng: parseFloat(lng)
+    }, { where: { id: req.user.userId } });
     return res.json({ message: 'Location updated' });
   } catch (err) {
     return res.status(500).json({ error: err.message });
