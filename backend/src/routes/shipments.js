@@ -72,7 +72,7 @@ router.post('/', authenticate, async (req, res) => {
         note: `Auto-assigned to ${nearest.data.name}`,
       }];
       shipment.statusTimeline = updatedTimeline;
-      
+      shipment.changed('statusTimeline', true);
       await shipment.save();
       await User.update({ status: 'busy' }, { where: { id: nearest.id } });
       
@@ -144,6 +144,7 @@ router.patch('/:id/status', authenticate, async (req, res) => {
       updatedBy: req.user.userId,
     }];
     shipment.statusTimeline = updatedTimeline;
+    shipment.changed('statusTimeline', true);
     await shipment.save();
 
     if (status === 'DELIVERED' && shipment.deliveryPartnerId) {

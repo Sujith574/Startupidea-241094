@@ -38,6 +38,7 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
       shipment.deliveryPartnerName = null;
       shipment.status = 'CREATED';
       shipment.statusTimeline = [...shipment.statusTimeline, { status: 'CREATED', timestamp: now, note: 'Partner rejected — re-queued' }];
+      shipment.changed('statusTimeline', true);
       await shipment.save();
       await User.update({ status: 'available' }, { where: { id: uid } });
       return res.json({ message: 'Job rejected and re-queued' });
@@ -45,6 +46,7 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
 
     if (action === 'accept') {
       shipment.statusTimeline = [...shipment.statusTimeline, { status: 'PARTNER_ASSIGNED', timestamp: now, note: 'Partner accepted', updatedBy: uid }];
+      shipment.changed('statusTimeline', true);
       await shipment.save();
       return res.json({ message: 'Job accepted' });
     }
@@ -52,6 +54,7 @@ router.patch('/jobs/:id', authenticate, async (req, res) => {
     if (status && STATUS_OPTIONS.includes(status)) {
       shipment.status = status;
       shipment.statusTimeline = [...shipment.statusTimeline, { status, timestamp: now, note: note || `Updated to ${status}`, updatedBy: uid }];
+      shipment.changed('statusTimeline', true);
       await shipment.save();
 
       if (status === 'DELIVERED') {

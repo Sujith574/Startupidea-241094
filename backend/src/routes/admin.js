@@ -5,6 +5,7 @@ const Shipment = require('../models/Shipment');
 const Transaction = require('../models/Transaction');
 const { Notifications } = require('../utils/notifications');
 const { sequelize } = require('../config/db');
+const { Op } = require('sequelize');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.use(authenticate, adminOnly);
 router.get('/users', async (req, res) => {
   try {
     const users = await User.findAll({
-      where: { role: { [sequelize.Sequelize.Op.in]: ['user', 'admin'] } },
+      where: { role: { [Op.in]: ['user', 'admin'] } },
       order: [['createdAt', 'DESC']]
     });
     return res.json({ users, count: users.length });
@@ -107,11 +108,16 @@ router.patch('/assign-partner', async (req, res) => {
     shipment.deliveryPartnerId = partner.id;
     shipment.deliveryPartnerName = partner.name;
     shipment.status = 'PARTNER_ASSIGNED';
-    shipment.statusTimeline = [...shipment.statusTimeline, {
+    
+    const updatedTimeline = [...shipment.statusTimeline, {
       status: 'PARTNER_ASSIGNED',
       timestamp: new Date(),
       note: `Manually assigned by admin to ${partner.name}`,
     }];
+    
+    shipment.statusTimeline = updatedTimeline;
+    shipment.changed('statusTimeline', true);
+    
     await shipment.save();
     await User.update({ status: 'busy' }, { where: { id: partnerId } });
 
