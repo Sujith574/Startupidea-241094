@@ -36,7 +36,6 @@ services:
   - type: web
     name: parcelbridge-frontend
     env: static
-    region: singapore
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
