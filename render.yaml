@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: parcelbridge-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false   # set manually in Render dashboard
+      - key: JWT_SECRET
+        value: ahilugodltwuhlhh
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        value: sujithlavudu@gmail.com
+      - key: SMTP_PASS
+        value: ahilugodltwuhlhh
+      - key: EMAIL_FROM
+        value: "ParcelBridge <sujithlavudu@gmail.com>"
+      - key: PLATFORM_FEE_PERCENT
+        value: 10
+      - key: OTP_EXPIRES_MIN
+        value: 10
+
+  - type: web
+    name: parcelbridge-frontend
+    env: static
+    region: singapore
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false   # set to backend URL after deploy
