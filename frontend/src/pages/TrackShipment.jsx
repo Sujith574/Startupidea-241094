@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import AppLayout from '../components/AppLayout';
 import { getShipment } from '../lib/api';
 import { Package, MapPin, Check, Clock, Truck, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,6 +23,11 @@ export default function TrackShipment() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     getShipment(id)
       .then((d) => setShipment(d.shipment))
       .catch((err) => toast.error(err.message))
@@ -41,16 +45,31 @@ export default function TrackShipment() {
   const currentIndex = shipment ? statusIndex(shipment.status) : -1;
 
   return (
-    <AppLayout currentPage="/dashboard">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-slate-950 text-slate-300">
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Package className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-xl text-white">ParcelBridge</span>
+          </Link>
+          <Link to="/" className="text-sm font-medium hover:text-brand-400 transition-colors">
+            Back to Home
+          </Link>
+        </div>
+      </nav>
+
+      <div className="p-6 lg:p-8 animate-fade-in max-w-2xl mx-auto mt-8">
         <div className="flex items-center gap-4 mb-6">
-          <Link to="/dashboard" className="btn-secondary text-sm py-2 px-3">
+          <Link to="/" className="btn-secondary text-sm py-2 px-3">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            Home
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-white">Track Shipment</h1>
-            <p className="text-slate-400 text-sm font-mono">{id.slice(0, 8).toUpperCase()}</p>
+            <h1 className="text-xl font-bold text-white">Track Consignment</h1>
+            {id && <p className="text-slate-400 text-sm font-mono">{id.toUpperCase()}</p>}
           </div>
         </div>
 
@@ -59,14 +78,15 @@ export default function TrackShipment() {
             {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />)}
           </div>
         ) : !shipment ? (
-          <div className="card text-center py-12">
+          <div className="card text-center py-12 border border-white/10">
             <Package className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">Shipment not found</p>
+            <p className="text-slate-400">Consignment not found or tracking ID is invalid.</p>
+            <Link to="/" className="btn-primary mt-6">Return to Home</Link>
           </div>
         ) : (
           <div className="space-y-4 animate-slide-up">
             {/* Info Card */}
-            <div className="card">
+            <div className="card border border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="text-xs text-slate-400 font-mono mb-1">TRACKING ID</div>
@@ -96,8 +116,8 @@ export default function TrackShipment() {
             </div>
 
             {/* Status Timeline */}
-            <div className="card">
-              <h2 className="text-base font-semibold text-white mb-6">Shipment Timeline</h2>
+            <div className="card border border-white/10">
+              <h2 className="text-base font-semibold text-white mb-6">Consignment Timeline</h2>
               <div className="relative">
                 {STATUS_STEPS.map((step, i) => {
                   const isDone = i <= currentIndex;
@@ -150,6 +170,6 @@ export default function TrackShipment() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </div>
   );
 }
