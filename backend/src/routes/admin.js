@@ -64,6 +64,8 @@ router.get('/analytics', async (req, res) => {
       activePartners,
       transactions,
       shipmentStatuses,
+      totalInquiries,
+      totalVisitorLogs,
     ] = await Promise.all([
       User.count({ where: { role: 'user' } }),
       User.count({ where: { role: 'deliveryPartner' } }),
@@ -74,6 +76,8 @@ router.get('/analytics', async (req, res) => {
         attributes: ['status', [sequelize.fn('COUNT', sequelize.col('status')), 'count']],
         group: ['status']
       }),
+      sequelize.model('Inquiry').count(),
+      sequelize.model('VisitorLog').count(),
     ]);
 
     const totalRevenue = transactions.reduce((s, t) => s + (t.platformFee || 0), 0);
@@ -90,6 +94,8 @@ router.get('/analytics', async (req, res) => {
       totalRevenue,
       completedOrders,
       statusCounts,
+      totalInquiries,
+      totalVisitorLogs,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

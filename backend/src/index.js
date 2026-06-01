@@ -10,6 +10,8 @@ const shipmentRoutes = require('./routes/shipments');
 const partnerRoutes  = require('./routes/partners');
 const adminRoutes    = require('./routes/admin');
 const courierRoutes  = require('./routes/couriers');
+const inquiriesRoutes = require('./routes/inquiries');
+const visitorRoutes   = require('./routes/visitor');
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use('/shipments', shipmentRoutes);
 app.use('/partners',  partnerRoutes);
 app.use('/admin',     adminRoutes);
 app.use('/couriers',  courierRoutes);
+app.use('/inquiries', inquiriesRoutes);
+app.use('/visitor',   visitorRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` }));

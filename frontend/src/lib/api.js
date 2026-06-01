@@ -61,4 +61,11 @@ export const getAdminAnalytics = () => api.get('/admin/analytics');
 export const assignPartner = (data) => api.patch('/admin/assign-partner', data);
 export const updateUserRole = (id, role) => api.patch(`/admin/users/${id}/role`, { role });
 
+// ─── Inquiries & Visitor Tracking ──────────────────────────────────────────────
+export const submitInquiry = (data) => api.post('/inquiries', data);
+export const getAdminInquiries = () => api.get('/inquiries');
+export const updateInquiryStatus = (id, status) => api.patch(`/inquiries/${id}`, { status });
+export const logVisitorPage = (page) => api.post('/visitor/log', { page });
+export const getAdminVisitorLogs = () => api.get('/visitor/logs');
+
 export default api;
