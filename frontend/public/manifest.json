@@ -1,0 +1,18 @@
+{
+  "short_name": "ParcelBridge",
+  "name": "ParcelBridge Relocation & Logistics",
+  "description": "India's smartest relocation and logistics platform.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#ed1c24",
+  "display": "standalone",
+  "orientation": "portrait"
+}

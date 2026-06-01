@@ -66,10 +66,35 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
 
-  // Submit analytics page visit
+  // PWA Installation Trigger State
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  // Submit analytics page visit and set PWA installer hooks
   useEffect(() => {
     logVisitorPage('/').catch(() => {});
+
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleTrack = (e) => {
     e.preventDefault();
@@ -177,6 +202,14 @@ export default function LandingPage() {
 
             {/* CTA Phone & Tracking */}
             <div className="hidden sm:flex items-center gap-4">
+              {isInstallable && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-sm transition-all border border-slate-700 shadow"
+                >
+                  Download Web App
+                </button>
+              )}
               <a 
                 href="tel:9300300300" 
                 className="flex items-center gap-2 px-4 py-2 bg-brand-50 hover:bg-brand-100 text-brand-600 font-bold rounded-lg text-sm transition-colors border border-brand-200"
@@ -227,6 +260,14 @@ export default function LandingPage() {
               </div>
             ))}
             <div className="flex flex-col gap-2 pt-4">
+              {isInstallable && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="w-full py-3 bg-slate-900 text-white font-bold text-center rounded-xl text-sm"
+                >
+                  Download Web App
+                </button>
+              )}
               <a 
                 href="tel:9300300300"
                 className="w-full flex items-center justify-center gap-2 py-3 bg-brand-50 text-brand-600 font-bold rounded-xl border border-brand-200"
