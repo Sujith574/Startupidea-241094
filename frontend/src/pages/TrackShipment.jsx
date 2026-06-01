@@ -45,17 +45,17 @@ export default function TrackShipment() {
   const currentIndex = shipment ? statusIndex(shipment.status) : -1;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300">
+    <div className="min-h-screen bg-slate-50 text-slate-800">
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Package className="w-4 h-4 text-white" />
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center text-white">
+              <Package className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-xl text-white">ParcelBridge</span>
+            <span className="font-extrabold text-lg text-slate-900 uppercase">ParcelBridge</span>
           </Link>
-          <Link to="/" className="text-sm font-medium hover:text-brand-400 transition-colors">
+          <Link to="/" className="text-sm font-bold text-brand-500 hover:text-brand-600 transition-colors">
             Back to Home
           </Link>
         </div>
@@ -63,61 +63,61 @@ export default function TrackShipment() {
 
       <div className="p-6 lg:p-8 animate-fade-in max-w-2xl mx-auto mt-8">
         <div className="flex items-center gap-4 mb-6">
-          <Link to="/" className="btn-secondary text-sm py-2 px-3">
+          <Link to="/" className="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-600 hover:bg-slate-50 font-bold transition-all">
             <ArrowLeft className="w-4 h-4" />
             Home
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-white">Track Consignment</h1>
-            {id && <p className="text-slate-400 text-sm font-mono">{id.toUpperCase()}</p>}
+            <h1 className="text-2xl font-black text-slate-900">Track Consignment</h1>
+            {id && <p className="text-slate-500 text-xs font-mono">{id.toUpperCase()}</p>}
           </div>
         </div>
 
         {loading ? (
           <div className="space-y-4">
-            {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />)}
+            {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-white animate-pulse border border-slate-200" />)}
           </div>
         ) : !shipment ? (
-          <div className="card text-center py-12 border border-white/10">
-            <Package className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">Consignment not found or tracking ID is invalid.</p>
-            <Link to="/" className="btn-primary mt-6">Return to Home</Link>
+          <div className="bg-white border border-slate-200 rounded-2xl text-center py-12 px-6 shadow-md">
+            <Package className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-600 font-medium">Consignment not found or tracking ID is invalid.</p>
+            <Link to="/" className="mt-6 inline-block px-6 py-2.5 bg-brand-500 text-white rounded-lg font-bold text-sm shadow-md shadow-brand-500/25">Return to Home</Link>
           </div>
         ) : (
-          <div className="space-y-4 animate-slide-up">
+          <div className="space-y-6 animate-slide-up">
             {/* Info Card */}
-            <div className="card border border-white/10">
-              <div className="flex items-start justify-between mb-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-md">
+              <div className="flex items-start justify-between mb-6 pb-4 border-b border-slate-100">
                 <div>
-                  <div className="text-xs text-slate-400 font-mono mb-1">TRACKING ID</div>
-                  <div className="font-mono text-sm text-white">{shipment.courier?.trackingId || id.slice(0, 12).toUpperCase()}</div>
+                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">TRACKING ID</div>
+                  <div className="font-mono text-sm font-black text-slate-800">{shipment.courier?.trackingId || id.slice(0, 12).toUpperCase()}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-slate-400 mb-1">TOTAL</div>
-                  <div className="text-lg font-bold text-white">₹{shipment.totalAmount}</div>
+                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">TOTAL COST</div>
+                  <div className="text-xl font-black text-brand-500">₹{shipment.totalAmount}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {[
-                  { label: 'From', value: shipment.pickupAddress },
-                  { label: 'To', value: shipment.deliveryAddress },
-                  { label: 'Courier', value: `${shipment.courier?.logo || ''} ${shipment.courier?.courier || '—'}` },
-                  { label: 'ETA', value: shipment.courier?.etaLabel || '—' },
-                  { label: 'Weight', value: `${shipment.weight} kg` },
-                  { label: 'Partner', value: shipment.deliveryPartnerName || 'Being assigned...' },
+                  { label: 'Pickup Origin Address', value: shipment.pickupAddress },
+                  { label: 'Destination Address', value: shipment.deliveryAddress },
+                  { label: 'Assigned Courier Service', value: `${shipment.courier?.logo || ''} ${shipment.courier?.courier || 'Standard Cargo'}` },
+                  { label: 'Estimated Arrival', value: shipment.courier?.etaLabel || '2-4 Days' },
+                  { label: 'Consignment Weight', value: `${shipment.weight} kg` },
+                  { label: 'Delivery Partner Fleet', value: shipment.deliveryPartnerName || 'Assigning fleet driver...' },
                 ].map((r) => (
                   <div key={r.label} className="flex flex-col gap-0.5">
-                    <span className="text-xs text-slate-500">{r.label}</span>
-                    <span className="text-slate-200">{r.value}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{r.label}</span>
+                    <span className="text-slate-700 font-semibold">{r.value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Status Timeline */}
-            <div className="card border border-white/10">
-              <h2 className="text-base font-semibold text-white mb-6">Consignment Timeline</h2>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-md">
+              <h2 className="text-lg font-black text-slate-900 mb-6 border-b border-slate-100 pb-3">Consignment Timeline</h2>
               <div className="relative">
                 {STATUS_STEPS.map((step, i) => {
                   const isDone = i <= currentIndex;
@@ -128,38 +128,38 @@ export default function TrackShipment() {
                     <div key={step.key} className="flex gap-4 relative">
                       {/* Line */}
                       {i < STATUS_STEPS.length - 1 && (
-                        <div className={`absolute left-4 top-8 w-0.5 h-full -translate-x-1/2 ${isDone && i < currentIndex ? step.line : 'bg-white/10'}`} />
+                        <div className={`absolute left-4 top-8 w-0.5 h-full -translate-x-1/2 ${isDone && i < currentIndex ? 'bg-brand-500' : 'bg-slate-200'}`} />
                       )}
 
                       {/* Icon */}
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 transition-all duration-500
                         ${isDone
                           ? isCurrent
-                            ? 'bg-brand-500 shadow-lg shadow-brand-500/40 scale-110'
-                            : 'bg-emerald-500/30 text-emerald-400'
-                          : 'bg-white/5 text-slate-600'
-                        } ${step.color}`}
+                            ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/40 scale-110'
+                            : 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 text-slate-400 border border-slate-200'
+                        }`}
                       >
-                        {isDone && !isCurrent ? <Check className="w-4 h-4" /> : step.icon}
+                        {isDone && !isCurrent ? <Check className="w-4.5 h-4.5" /> : step.icon}
                       </div>
 
                       {/* Content */}
                       <div className={`pb-6 flex-1 ${i === STATUS_STEPS.length - 1 ? 'pb-0' : ''}`}>
-                        <div className={`font-medium text-sm ${isDone ? 'text-white' : 'text-slate-500'}`}>
+                        <div className={`font-bold text-sm ${isDone ? 'text-slate-800' : 'text-slate-400'}`}>
                           {step.label}
                           {isCurrent && (
-                            <span className="ml-2 badge bg-brand-500/20 text-brand-400 border border-brand-500/30 text-xs animate-pulse-slow">
-                              Current
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-500 border border-brand-500/20 uppercase tracking-wider animate-pulse">
+                              Active
                             </span>
                           )}
                         </div>
                         {timelineEntry ? (
-                          <div className="text-xs text-slate-500 mt-0.5">
+                          <div className="text-xs text-slate-500 mt-1">
                             {new Date(timelineEntry.timestamp).toLocaleString('en-IN')}
-                            {timelineEntry.note && <span className="ml-2">· {timelineEntry.note}</span>}
+                            {timelineEntry.note && <span className="ml-2 text-brand-500">· {timelineEntry.note}</span>}
                           </div>
                         ) : (
-                          <div className="text-xs text-slate-600 mt-0.5">Pending</div>
+                          <div className="text-xs text-slate-400 mt-1">Status pending</div>
                         )}
                       </div>
                     </div>
